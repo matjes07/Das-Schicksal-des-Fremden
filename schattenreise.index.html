@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Schattenreise</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+    }
+    #game {
+      max-width: 600px;
+      margin: auto;
+    }
+    #title-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin-bottom: 20px;
+    }
+    #output {
+      white-space: pre-wrap;
+      background: #222;
+      padding: 15px;
+      border-radius: 5px;
+      min-height: 300px;
+    }
+    #input {
+      width: calc(100% - 10px);
+      padding: 5px;
+      margin-top: 10px;
+      font-size: 1em;
+      background: #333;
+      color: #eee;
+      border: 1px solid #555;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <!-- Titelbild-Slot: Tausche "titelbild.png" gegen deine Datei -->
+    <img id="title-img" src="titelbild.png" alt="Titelbild Schattenreise" />
+
+    <div id="output"></div>
+    <input id="input" placeholder="Deine Eingabe..." autofocus />
+  </div>
+
+  <script>
+    const output = document.getElementById("output");
+    const input = document.getElementById("input");
+
+    const state = {
+      coins: 0,
+      items: [],
+      score: 0,
+      phase: 0,
+      choice1: null,
+      special: null,
+      flags: {}
+    };
+
+    function print(text) {
+      output.innerText += text + "\n";
+      output.scrollTop = output.scrollHeight;
+    }
+    function clear() {
+      output.innerText = "";
+    }
+
+    function next(prompt, nextPhase) {
+      print(prompt);
+      state.phase = nextPhase;
+    }
+
+    function addCoins(n) {
+      state.coins += n;
+      print(`\nDu findest ${n} Münzen. (Jetzt: ${state.coins})\n`);
+    }
+
+    function listItems() {
+      if (!state.items.length) return "Keine Items.";
+      return state.items.map((it,i)=>`${i+1}. ${it}`).join("\n");
+    }
+
+    function handle(val) {
+      val = val.trim().toLowerCase();
+      switch(state.phase) {
+        case 0:
+          clear();
+          print("HAUPTMENÜ:\n1. Abenteuer beginnen\n2. Credits\n3. Spiel beenden");
+          state.phase = 1;
+          break;
+        case 1:
+          if (val === "1") next("Der Himmel ist bleigrau... Du siehst GOLD und SCHWERT.", 2);
+          else if (val === "2") { print("Ein Spiel voller Magie, geschrieben von Matias Fong Labes."); }
+          else if (val === "3") { print("Auf Wiedersehen."); input.disabled = true; }
+          else print("Bitte 1, 2 oder 3.");
+          break;
+        case 2:
+          if (["gold","schwert"].includes(val)) {
+            state.choice1 = val;
+            next("Wähle Höhle: links oder rechts?", 3);
+          } else print("Bitte 'gold' oder 'schwert'.");
+          break;
+        case 3:
+          if (["links","rechts"].includes(val)) {
+            if (val==="links") {
+              if (state.choice1==="schwert") {
+                state.score++;
+                next("Drache besiegt! Relikt: Zahn oder Auge?", 4);
+              } else { print("Du verglühst. GAME OVER."); input.disabled = true; }
+            } else {
+              if (state.choice1==="gold") {
+                state.score++;
+                next("Barbaren-freundlich! Rhabarberkuchen oder Bogen?", 4);
+              } else { print("Barbaren zerhacken dich. GAME OVER."); input.disabled = true; }
+            }
+          } else print("Bitte 'links' oder 'rechts'.");
+          break;
+        case 4:
+          if (["zahn","auge","kuchen","bogen"].includes(val)) {
+            state.special = val;
+            state.score++;
+            addCoins(10);
+            print(`\nKapitel1 beendet. Score: ${state.score}`);
+            next("Kapitel2: 'abzweigen' oder 'weitergehen'?", 5);
+          } else print("Bitte gültige Auswahl.");
+          break;
+        case 5:
+          if (val === "abzweigen") {
+            state.items.push("Leuchtendes Amulett");
+            state.score++;
+            addCoins(5);
+          }
+          next("Kobold-Händler. (weiterziehen oder kaufen)", 6);
+          break;
+        case 6:
+          next("Rechts=Mine oder links=Dorf?", 7);
+          break;
+        case 7:
+          if (["rechts","links"].includes(val)) {
+            if (val==="rechts") next("In der Mine: Spitzhacke oder Dynamit?", 8);
+            else next("Im Dorf: Mistgabel oder Puppe?", 8);
+          } else print("Bitte 'rechts' oder 'links'.");
+          break;
+        case 8:
+          if (["spitzhacke","dynamit","mistgabel","puppe"].includes(val)) {
+            state.flags.dynamit = (val==="dynamit");
+            state.flags.puppe = (val==="puppe");
+            print("Bereite dich auf Schlosskampf vor...");
+            next("KAPITEL3 startet!", 9);
+          } else print("Bitte gültige Auswahl.");
+          break;
+        case 9:
+          if (state.flags.puppe) {
+            state.score += 3;
+            print("Emotionale Überzeugung – Sieg!");
+            next("Weiter zu Kapitel4...", 10);
+          } else if (state.flags.dynamit) {
+            state.score++;
+            print("Dynamit-Explosion – Sieg!");
+            next("Weiter zu Kapitel4...", 10);
+          } else {
+            print("Keine Waffe geeignet – GEGENSPIEL ENDET HIER. GAME OVER.");
+            input.disabled = true;
+          }
+          break;
+        case 10:
+          next("Kapitel4: helfen / ausrauben / weiterziehen?", 11);
+          break;
+        case 11:
+          if (val==="helfen") print("Du rettest Dorfbewohner – ehrenvoll.");
+          else if (val==="ausrauben") { print("Du stiehlst Gold."); addCoins(5); }
+          next("Portal-Finale: (fliehen / reden / angreifen) oder Item nutzen", 12);
+          break;
+        case 12:
+          if (["magischer spiegel","unsichtbarkeitstrank","verfluchter ring"].includes(val)) {
+            print("Mit Item Luft – du gewinnst!");
+            print(`\nFinal Score: ${state.score}, Münzen: ${state.coins}, Items: ${state.items.join(", ")}`);
+            input.disabled = true;
+          } else if (["fliehen","reden","angreifen"].includes(val)) {
+            print("Ohne Item endet das Spiel je nach Wahl...");
+            print(`\nFinal Score: ${state.score}, Münzen: ${state.coins}, Items: ${state.items.join(", ")}`);
+            input.disabled = true;
+          } else print("Bitte gültige Wahl.");
+          break;
+      }
+    }
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !input.disabled) {
+        print("> " + input.value);
+        handle(input.value);
+        input.value = "";
+      }
+    });
+
+    handle("");
+  </script>
+</body>
+</html>
